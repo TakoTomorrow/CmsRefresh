@@ -1,0 +1,32 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+        nodejs: 12
+    commands:
+      # Install all dependencies (including dependencies for running tests)
+      - npm install
+      - npm install --save-dev serverless-newrelic-lambda-layers
+  build:
+    commands:
+      # Use AWS SAM to package the application by using AWS CloudFormation
+      - echo Installing source NPM dependencies
+      - npm install
+      - cd src/handlers && npm install
+      - cd helpers && npm install
+      - cd ../../..
+      - export BUCKET=acer-microservices
+      - export BUCKETOregon=acer-microservices-oregon
+      #- sam package --template-file template-dev.yaml --s3-bucket $BUCKET --output-template-file outputSamtemplate-dev.yaml
+     # - sam package --template-file template-uat.yaml --s3-bucket $BUCKET --output-template-file outputSamtemplate-uat.yaml
+      - sam package --template-file template.yaml --s3-bucket $BUCKET --output-template-file outputSamtemplate.yaml
+      - sam package --template-file template.yaml --s3-bucket $BUCKETOregon --output-template-file outputSamtemplate-Oregon.yaml
+      - aws sts get-caller-identity
+artifacts:
+  files:
+    - template.yaml
+    - outputSamtemplate.yaml
+    - outputSamtemplate-Oregon.yaml
+    - package.json
+    - src/handlers/*
+    - __tests__

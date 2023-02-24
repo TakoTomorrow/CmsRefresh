@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Cache Buster Microservice
+Resources:
+  cachePrivateQueueBuilderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePrivateQueueBuilder.handler
+      Runtime: nodejs12.x
+      MemorySize: 128
+      CodeUri: src/handlers
+      Timeout: 50
+      Description: A Lambda function that sends page data to SQS where it will wait to be processed.
+      Events:
+        CachePages:
+          Type: Api
+          Properties:
+            Path: /cache/pages
+            Method: post
+        ReloadPages:
+          Type: Api
+          Properties:
+            Path: /reload/pages
+            Method: post      
+        PurgePages:
+          Type: Api
+          Properties:
+            Path: /purge/pages
+            Method: post
+        Cachebinaries:
+          Type: Api
+          Properties:
+            Path: /cache/binaries
+            Method: post
+        ReloadBinaries:
+          Type: Api
+          Properties:
+            Path: /reload/binaries
+            Method: post
+        PurgeBinaries:
+          Type: Api
+          Properties:
+            Path: /purge/binaries
+            Method: post
+  cachePrivateQueueProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePrivateQueueProcessor.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 50
+      Description: A Lambda function that recieves requests from SQS to be processed and sent to Redis and Akamai if the request is valid.
+  cachePublicClearPagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearPages.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 50
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /pages
+            Method: post
+  cachePublicClearBinary:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearBinary.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 50
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /binary
+            Method: post            
+  cachePublicClearSingleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearSingle.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 50
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /page/{proxy+}
+            Method: get
+  cachePublicClearSingleBinaryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearSingleBinary.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 50
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /binary/{proxy+}
+            Method: get
+Globals:
+  Function:
+    Runtime: nodejs12.x
+    Timeout: 50
+    Environment:
+      Variables:
+        STAGE: "prd"
+        CACHE_PORT: 6379
+        CACHE_URL: "acer-elastic-prd.lgrwyo.clustercfg.apne1.cache.amazonaws.com"
+        REGION: ap-northeast-1
+        SQS_URL: "https://sqs.us-west-2.amazonaws.com/932161776041/ACER-CACHEBUSTER-PRD.fifo"
+    VpcConfig:
+        SecurityGroupIds:
+          - sg-0c7727ff4f2201486
+        SubnetIds:
+          - subnet-052c6b349176e9bf0
+          - subnet-0e6ac1848e517e48e
+  Api:
+    EndpointConfiguration: EDGE
+    Domain:
+      DomainName:  cachebuster-live-us-west-2.agw-prd.acer.com
+      CertificateArn: arn:aws:acm:us-east-1:932161776041:certificate/3f46960d-996f-459a-9c50-f4d1699dbc31
+      EndpointConfiguration: EDGE
+      BasePath:
+        - /api

@@ -1,0 +1,175 @@
+# This is the SAM template that represents the architecture of your serverless application
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-template-basics.html
+
+# The AWSTemplateFormatVersion identifies the capabilities of the template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/format-version-structure.html
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  cache-buster
+
+# Transform section specifies one or more macros that AWS CloudFormation uses to process your template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-section-structure.html
+Transform:
+- AWS::Serverless-2016-10-31
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # Each Lambda function is defined by properties:
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+
+  cachePrivateQueueBuilderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePrivateQueueBuilder.handler
+      Runtime: nodejs12.x
+      MemorySize: 128
+      CodeUri: src/handlers
+      Timeout: 10
+      Description: A Lambda function that sends page data to SQS where it will wait to be processed.
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        CachePages:
+          Type: Api
+          Properties:
+            Path: /cache/pages
+            Method: post
+        ReloadPages:
+          Type: Api
+          Properties:
+            Path: /reload/pages
+            Method: post      
+        PurgePages:
+          Type: Api
+          Properties:
+            Path: /purge/pages
+            Method: post
+        Cachebinaries:
+          Type: Api
+          Properties:
+            Path: /cache/binaries
+            Method: post
+        ReloadBinaries:
+          Type: Api
+          Properties:
+            Path: /reload/binaries
+            Method: post
+        PurgeBinaries:
+          Type: Api
+          Properties:
+            Path: /purge/binaries
+            Method: post
+  cachePrivateQueueProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePrivateQueueProcessor.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 10
+      Description: A Lambda function that recieves requests from SQS to be processed and sent to Redis and Akamai if the request is valid.
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+  cachePublicClearPagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearPages.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 10
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /pages
+            Method: post
+  cachePublicClearBinary:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearBinary.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 10
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /binary
+            Method: post            
+  cachePublicClearSingleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearSingle.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 10
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /page/{proxy+}
+            Method: get
+  cachePublicClearSingleBinaryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearSingleBinary.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 10
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Policies:
+        # Give Lambda basic execution Permission to the helloFromLambda
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /binary/{proxy+}
+            Method: get
+  CacheBusterQueue:   
+    Type: AWS::SQS::FifoQueue
+    Properties: 
+      ContentBasedDeduplication: Boolean
+      DelaySeconds: Integer
+      FifoQueue: Boolean
+      KmsDataKeyReusePeriodSeconds: Integer
+      KmsMasterKeyId: String
+      MaximumMessageSize: Integer
+      MessageRetentionPeriod: Integer
+      QueueName: CacheBuster.fifo
+      ReceiveMessageWaitTimeSeconds: Integer
+      RedrivePolicy: Json
+      Tags: 
+        - Tag
+      VisibilityTimeout: Integer
+Globals:
+  Function:
+    Runtime: nodejs12.x
+    Environment:
+      Variables:
+        STAGE: "dev"
+        CACHE_PORT: 6379
+        CACHE_URL: "127.0.0.1"
+        REGION: ap-northeast-1
+        SQS_URL: "https://sqs.ap-northeast-1.amazonaws.com/685493992421/ACER-CACHEBUSTER-DEV.fifo"
+        AKAMAI_URL: "https://akab-z6aa4qnbbnadfac6-fguhb6vmst6c4g5n.luna.akamaiapis.net/ccu/v3/invalidate/url/staging"
+        AKAMAI_CREDS: "EG1-HMAC-SHA256 client_token=akab-xehmvkof6lww5dfr-z7un7asiqk6ghipl;access_token=akab-kepampngeti6srkc-qlzyri4ldcrlbanx;timestamp=20210125T22:41:51+0000;nonce=c6bfb54b-3c5c-4c79-b8bd-df07f10cf65a;signature=uu+aQsecG1gLZODmjLS4G5b+cro+2thyV1Yq+EBuo78="

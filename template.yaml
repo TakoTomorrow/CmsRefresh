@@ -1,0 +1,433 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Cache Buster Microservice
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - PROD
+      - PRODOregon
+      - UAT
+      - DEV
+Mappings:
+  AccountMap:
+    PROD:
+      Subnet1: subnet-052c6b349176e9bf0
+      Subnet2: subnet-0e6ac1848e517e48e
+      SecurityGroupIds: sg-0c7727ff4f2201486
+      Region: ap-northeast-1
+      Layer: "arn:aws:lambda:ap-northeast-1:451483290750:layer:NewRelicNodeJS12X:40"
+      vpcendpoint: vpce-0560b3e728734b051
+    PRODOregon:
+      Subnet1: subnet-0df2fac009415c8c4
+      Subnet2: subnet-05242746e623f5c59
+      SecurityGroupIds: sg-05c48e97c50e8c549
+      Region: us-west-1
+      Layer: "arn:aws:lambda:us-west-2:451483290750:layer:NewRelicNodeJS12X:40"
+      vpcendpoint: vpce-07956d8c71ec1e362
+    UAT:
+      Subnet1: subnet-0f4f973d5d9b82538
+      Subnet2: subnet-05d179bc2415b9c47
+      SecurityGroupIds: sg-09270fd5616ed4c67
+      Region: ap-northeast-1
+      Layer: "arn:aws:lambda:ap-northeast-1:451483290750:layer:NewRelicNodeJS12X:40"
+      vpcendpoint: vpce-0709656ce189fd09f
+    Dev:
+      Subnet1: subnet-059e9725f833e6c46
+      Subnet2: subnet-0b5f6ef43bad709e8
+      SecurityGroupIds: sg-0fe22690cf7294edb
+      Region: ap-northeast-1
+      Layer: "arn:aws:lambda:ap-northeast-1:451483290750:layer:NewRelicNodeJS12X:38"
+      
+Resources:
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      EndpointConfiguration:
+        Type: PRIVATE
+        VPCEndpointIds:
+          - !FindInMap 
+              - AccountMap
+              - !Ref Environment
+              - vpcendpoint
+      MethodSettings:
+        - LoggingLevel: INFO
+          ResourcePath: '/*' # allows for logging on any resource
+          HttpMethod: '*' # allows for logging on any method
+      Auth:
+        ResourcePolicy:
+          CustomStatements: {
+              Effect: 'Allow',
+              Principal: '*',
+              Action: 'execute-api:Invoke', 
+              Resource: ['execute-api:/*/*/*'],
+              Condition: {
+                StringEquals: {
+                aws:sourceVpce: !FindInMap [AccountMap, !Ref Environment, vpcendpoint]
+              }
+            }
+            }
+  cachePrivateQueueBuilderFunctionTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePrivateQueueBuilder.handler
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - AWSLambdaBasicExecutionRole
+        - SecretsManagerReadWrite
+        - AmazonElastiCacheFullAccess
+        - AmazonSQSFullAccess
+        - Statement:
+          - Sid: SSMDescribeParametersPolicy
+            Effect: Allow
+            Action:
+            - ssm:DescribeParameters
+            Resource: '*'
+          - Sid: SSMGetParameterPolicy
+            Effect: Allow
+            Action:
+            - ssm:GetParameters
+            - ssm:GetParameter
+            Resource: '*' 
+        - Statement:
+          - Sid: EC2Policy
+            Effect: Allow
+            Action:
+            - ec2:DeleteNetworkInterface
+            - ec2:DetachNetworkInterface
+            Resource: '*'
+      Runtime: nodejs12.x
+      MemorySize: 128
+      CodeUri: src/handlers
+      Timeout: 50
+      Description: A Lambda function that sends page data to SQS where it will wait to be processed.
+      Events:
+        CachePages:
+          Type: Api
+          Properties:
+            Path: /cache/pages
+            Method: post
+            RestApiId: !Ref Api
+        ReloadPages:
+          Type: Api
+          Properties:
+            Path: /reload/pages
+            Method: post
+            RestApiId: !Ref Api
+        PurgePages:
+          Type: Api
+          Properties:
+            Path: /purge/pages
+            Method: post
+            RestApiId: !Ref Api
+        Cachebinaries:
+          Type: Api
+          Properties:
+            Path: /cache/binaries
+            Method: post
+            RestApiId: !Ref Api
+        ReloadBinaries:
+          Type: Api
+          Properties:
+            Path: /reload/binaries
+            Method: post
+            RestApiId: !Ref Api
+        PurgeBinaries:
+          Type: Api
+          Properties:
+            Path: /purge/binaries
+            Method: post
+            RestApiId: !Ref Api
+            
+  cachePrivateQueueProcessorFunctionTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePrivateQueueProcessor.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - AWSLambdaBasicExecutionRole
+        - SecretsManagerReadWrite
+        - AmazonElastiCacheFullAccess
+        - AmazonSQSFullAccess
+        - Statement:
+          - Sid: SSMDescribeParametersPolicy
+            Effect: Allow
+            Action:
+            - ssm:DescribeParameters
+            Resource: '*'
+          - Sid: SSMGetParameterPolicy
+            Effect: Allow
+            Action:
+            - ssm:GetParameters
+            - ssm:GetParameter
+            Resource: '*' 
+        - Statement:
+          - Sid: EC2Policy
+            Effect: Allow
+            Action:
+            - ec2:DeleteNetworkInterface
+            - ec2:DetachNetworkInterface
+            Resource: '*'
+      MemorySize: 128
+      Timeout: 50
+      Description: A Lambda function that recieves requests from SQS to be processed and sent to Redis and Akamai if the request is valid.
+  
+  cachePublicClearPagesFunctionTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearPages.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Timeout: 50
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - AWSLambdaBasicExecutionRole
+        - SecretsManagerReadWrite
+        - AmazonElastiCacheFullAccess
+        - AmazonSQSFullAccess
+        - Statement:
+          - Sid: SSMDescribeParametersPolicy
+            Effect: Allow
+            Action:
+            - ssm:DescribeParameters
+            Resource: '*'
+          - Sid: SSMGetParameterPolicy
+            Effect: Allow
+            Action:
+            - ssm:GetParameters
+            - ssm:GetParameter
+            Resource: '*' 
+        - Statement:
+          - Sid: EC2Policy
+            Effect: Allow
+            Action:
+            - ec2:DeleteNetworkInterface
+            - ec2:DetachNetworkInterface
+            Resource: '*'
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /pages
+            Method: post
+            RestApiId: !Ref Api
+            
+  
+  cachePublicClearBinaryTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearBinary.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - AWSLambdaBasicExecutionRole
+        - SecretsManagerReadWrite
+        - AmazonElastiCacheFullAccess
+        - AmazonSQSFullAccess
+        - Statement:
+          - Sid: SSMDescribeParametersPolicy
+            Effect: Allow
+            Action:
+            - ssm:DescribeParameters
+            Resource: '*'
+          - Sid: SSMGetParameterPolicy
+            Effect: Allow
+            Action:
+            - ssm:GetParameters
+            - ssm:GetParameter
+            Resource: '*' 
+        - Statement:
+          - Sid: EC2Policy
+            Effect: Allow
+            Action:
+            - ec2:DeleteNetworkInterface
+            - ec2:DetachNetworkInterface
+            Resource: '*'
+      Timeout: 50
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /binary
+            Method: post
+            RestApiId: !Ref Api
+            
+            
+  cachePublicClearSingleFunctionTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearSingle.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - AWSLambdaBasicExecutionRole
+        - SecretsManagerReadWrite
+        - AmazonElastiCacheFullAccess
+        - AmazonSQSFullAccess
+        - Statement:
+          - Sid: SSMDescribeParametersPolicy
+            Effect: Allow
+            Action:
+            - ssm:DescribeParameters
+            Resource: '*'
+          - Sid: SSMGetParameterPolicy
+            Effect: Allow
+            Action:
+            - ssm:GetParameters
+            - ssm:GetParameter
+            Resource: '*' 
+        - Statement:
+          - Sid: EC2Policy
+            Effect: Allow
+            Action:
+            - ec2:DeleteNetworkInterface
+            - ec2:DetachNetworkInterface
+            Resource: '*'
+      Timeout: 50
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /page/{proxy+}
+            Method: get
+            RestApiId: !Ref Api
+            
+            
+  cachePublicClearSingleBinaryFunctionTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cachePublicClearSingleBinary.handler
+      Runtime: nodejs12.x
+      CodeUri: src/handlers
+      MemorySize: 128
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - AWSLambdaBasicExecutionRole
+        - SecretsManagerReadWrite
+        - AmazonElastiCacheFullAccess
+        - AmazonSQSFullAccess
+        - Statement:
+          - Sid: SSMDescribeParametersPolicy
+            Effect: Allow
+            Action:
+            - ssm:DescribeParameters
+            Resource: '*'
+          - Sid: SSMGetParameterPolicy
+            Effect: Allow
+            Action:
+            - ssm:GetParameters
+            - ssm:GetParameter
+            Resource: '*' 
+        - Statement:
+          - Sid: EC2Policy
+            Effect: Allow
+            Action:
+            - ec2:DeleteNetworkInterface
+            - ec2:DetachNetworkInterface
+            Resource: '*'
+      Timeout: 50
+      Description: A Lambda function that recieves requests from a public endpoint to be processed and sent to Redis and Akamai if the request is valid.
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /binary/{proxy+}
+            Method: get
+            RestApiId: !Ref Api
+            
+  
+      
+          
+  cachePrivateQueueBuilderFunction:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: {"Fn::Join": ["", ["/aws/lambda/", {"Ref": "cachePrivateQueueBuilderFunctionTest"}]]}
+      # Lambda functions will auto-create their log group on first execution, but it retains logs forever, which can get expensive.
+      RetentionInDays: 7
+      
+  cachePrivateQueueProcessorFunction:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: {"Fn::Join": ["", ["/aws/lambda/", {"Ref": "cachePrivateQueueProcessorFunctionTest"}]]}
+      # Lambda functions will auto-create their log group on first execution, but it retains logs forever, which can get expensive.
+      RetentionInDays: 7
+      
+  cachePublicClearPagesFunction:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: {"Fn::Join": ["", ["/aws/lambda/", {"Ref": "cachePublicClearPagesFunctionTest"}]]}
+      # Lambda functions will auto-create their log group on first execution, but it retains logs forever, which can get expensive.
+      RetentionInDays: 7
+      
+  cachePublicClearBinary:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: {"Fn::Join": ["", ["/aws/lambda/", {"Ref": "cachePublicClearBinaryTest"}]]}
+      # Lambda functions will auto-create their log group on first execution, but it retains logs forever, which can get expensive.
+      RetentionInDays: 7
+      
+  cachePublicClearSingleFunction:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: {"Fn::Join": ["", ["/aws/lambda/", {"Ref": "cachePublicClearSingleFunctionTest"}]]}
+      # Lambda functions will auto-create their log group on first execution, but it retains logs forever, which can get expensive.
+      RetentionInDays: 7
+      
+  cachePublicClearSingleBinaryFunction:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: {"Fn::Join": ["", ["/aws/lambda/", {"Ref": "cachePublicClearSingleBinaryFunctionTest"}]]}
+      # Lambda functions will auto-create their log group on first execution, but it retains logs forever, which can get expensive.
+      RetentionInDays: 7
+      
+Globals:
+  Function:
+    Runtime: nodejs12.x
+    Layers:
+      - !FindInMap
+        - AccountMap
+        - !Ref Environment
+        - Layer
+    
+    Environment:
+      Variables:
+        STAGE: '{{resolve:ssm:/MS/STAGE:1}}'
+        REGION: '{{resolve:ssm:/MS/REGION:1}}'
+        CACHE_URL: '{{resolve:ssm:/MS/CACHE_URL:1}}'
+        CACHE_PORT: '{{resolve:ssm:/MS/CACHE_PORT:1}}'
+        SQS_URL: '{{resolve:ssm:/cache-buster/live/SQS_URL:1}}'
+        #NEW_RELIC_LAMBDA_HANDLER: index.handler
+        NEW_RELIC_ACCOUNT_ID: '{{resolve:ssm:/New-Relic/AccountID:1}}'
+        NEW_RELIC_LAMBDA_EXTENSION_ENABLED: true
+        NEW_RELIC_EXTENSION_SEND_FUNCTION_LOGS: true
+        NEW_RELIC_EXTENSION_LOG_LEVEL: DEBUG
+        AKAMAI_URL: '{{resolve:ssm:/cache-buster/live/AKAMAI_URL:2}}'
+        AKAMAI_CLIENT_TOKEN: '{{resolve:ssm:/cache-buster/live/AKAMAI_CLIENT_TOKEN:1}}'
+        AKAMAI_ACCESS_TOKEN: '{{resolve:ssm:/cache-buster/live/AKAMAI_ACCESS_TOKEN:1}}'
+        AKAMAI_CLIENT_SECRET: '{{resolve:ssm:/cache-buster/live/AKAMAI_CLIENT_SECRET:1}}'
+    VpcConfig:
+        SecurityGroupIds:
+          - !FindInMap 
+            - AccountMap
+            - !Ref Environment
+            - SecurityGroupIds
+        SubnetIds:
+        - !FindInMap 
+            - AccountMap
+            - !Ref Environment
+            - Subnet1
+        - !FindInMap 
+            - AccountMap
+            - !Ref Environment
+            - Subnet2

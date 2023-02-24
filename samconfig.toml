@@ -1,0 +1,9 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "cache-buster-test-build"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-10xonehcikrre"
+s3_prefix = "cache-buster-test-build"
+region = "ap-northeast-1"
+capabilities = "CAPABILITY_IAM"

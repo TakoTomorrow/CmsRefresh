@@ -1,0 +1,36 @@
+version: 0.2
+env:
+  variables:
+    STAGE: "dev"
+    CACHE_PORT: 6379
+    CACHE_URL: "acer-elastic-dev.8gbhy9.0001.apne1.cache.amazonaws.com"
+    REGION: ap-northeast-1
+    SQS_URL: "https://sqs.ap-northeast-1.amazonaws.com/685493992421/ACER-CACHEBUSTER-DEV.fifo"
+phases:
+  install:
+    runtime-versions:
+        nodejs: 12
+    commands:
+      - echo Installing Jest
+      - npm install -g jest
+      - npm install -g sonarqube-scanner
+      - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-3.3.0.1492-linux.zip
+      - unzip ./sonar-scanner-cli-3.3.0.1492-linux.zip
+      - export PATH=$PATH:/sonar-scanner-3.3.0.1492-linux/bin/
+      - npm install
+      - cd src/handlers && npm install
+      - cd helpers && npm install
+      - cd ../../..
+      - ASSUME_ROLE_ARN="arn:aws:iam::685493992421:role/ACER-SHAREDSERVICES-ROLE"
+      - TEMP_ROLE=`aws sts assume-role --role-arn $ASSUME_ROLE_ARN --role-session-name test`
+      - export TEMP_ROLE
+      - echo $TEMP_ROLE
+      - export AWS_ACCESS_KEY_ID=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.AccessKeyId')
+      - export AWS_SECRET_ACCESS_KEY=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SecretAccessKey')
+      - export AWS_SESSION_TOKEN=$(echo "${TEMP_ROLE}" | jq -r '.Credentials.SessionToken')
+      - echo $AWS_ACCESS_KEY_ID
+      - echo $AWS_SECRET_ACCESS_KEY
+      - echo $AWS_SESSION_TOKEN
+      - aws sts get-caller-identity
+      - npm test
+      - sonar-scanner -Dsonar.host.url=https://sonarqube.intra.acer.com -Dsonar.login=b556f7a69280cf2d915458ea29da9749b37ae0c6

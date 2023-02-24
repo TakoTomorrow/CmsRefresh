@@ -1,0 +1,23 @@
+{
+    "name": "acer-cache-buster-live",
+    "description": "Lambdas for processing SQS and busting cache",
+    "version": "0.0.1",
+    "private": true,
+    "main": "src/handlers",
+    "dependencies": {
+        "aws-sdk": "^2.771.0",
+        "edgegrid": "^3.0.8",
+        "https": "^1.0.0",
+        "redis": "^3.0.2",
+        "uuid": "^8.3.2",
+        "md5": "^2.3.0"
+    },
+    "devDependencies": {
+        "aws-sdk-mock": "^5.1.0",
+        "chai": "^4.3.0",
+        "jest": "^24.7.1"
+    },
+    "scripts": {
+        "test": "jest --forceExit --coverage"
+    }
+}

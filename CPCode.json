@@ -1,0 +1,236 @@
+{
+    "CPCodeList": [
+        {
+            "locale": "ae-en",
+            "CPCode": "1368683"
+        },
+        {
+            "locale": "ar-es",
+            "CPCode": "1368684"
+        },
+        {
+            "locale": "at-de",
+            "CPCode": "1368685"
+        },
+        {
+            "locale": "au-en",
+            "CPCode": "1368686"
+        },
+        {
+            "locale": "be-nl",
+            "CPCode": "1368687"
+        },
+        {
+            "locale": "be-fr",
+            "CPCode": "1368687"
+        },
+        {
+            "locale": "bg-bg",
+            "CPCode": "1368688"
+        },
+        {
+            "locale": "br-pt",
+            "CPCode": "1368689"
+        },
+        {
+            "locale": "ca-fr",
+            "CPCode": "1368690"
+        },
+        {
+            "locale": "ca-en",
+            "CPCode": "1368690"
+        },
+        {
+            "locale": "ch-de",
+            "CPCode": "1368691"
+        },
+        {
+            "locale": "ch-fr",
+            "CPCode": "1368691"
+        },
+        {
+            "locale": "ch-it",
+            "CPCode": "1368691"
+        },
+        {
+            "locale": "cl-es",
+            "CPCode": "1368692"
+        },
+        {
+            "locale": "cn-zh",
+            "CPCode": "1368693"
+        },
+        {
+            "locale": "cz-cs",
+            "CPCode": "1368694"
+        },
+        {
+            "locale": "de-de",
+            "CPCode": "1368695"
+        },
+        {
+            "locale": "dk-da",
+            "CPCode": "1368696"
+        },
+        {
+            "locale": "ee-en",
+            "CPCode": "1368697"
+        },
+        {
+            "locale": "es-es",
+            "CPCode": "1368698"
+        },
+        {
+            "locale": "fi-fi",
+            "CPCode": "1368699"
+        },
+        {
+            "locale": "fr-fr",
+            "CPCode": "1368700"
+        },
+        {
+            "locale": "gb-en",
+            "CPCode": "1368701"
+        },
+        {
+            "locale": "gr-el",
+            "CPCode": "1368702"
+        },
+        {
+            "locale": "hk-zh",
+            "CPCode": "1368703"
+        },
+        {
+            "locale": "hk-en",
+            "CPCode": "1368703"
+        },
+        {
+            "locale": "hr-hr",
+            "CPCode": "1368704"
+        },
+        {
+            "locale": "hu-hu",
+            "CPCode": "1368706"
+        },
+        {
+            "locale": "id-id",
+            "CPCode": "1368707"
+        },
+        {
+            "locale": "id-en",
+            "CPCode": "1368707"
+        },
+        {
+            "locale": "ie-en",
+            "CPCode": "1368708"
+        },
+        {
+            "locale": "il-en",
+            "CPCode": "1368709"
+        },
+        {
+            "locale": "in-en",
+            "CPCode": "1368710"
+        },
+        {
+            "locale": "it-it",
+            "CPCode": "1368711"
+        },
+        {
+            "locale": "jp-ja",
+            "CPCode": "1368712"
+        },
+        {
+            "locale": "kr-ko",
+            "CPCode": "1368713"
+        },
+        {
+            "locale": "mx-es",
+            "CPCode": "1368714"
+        },
+        {
+            "locale": "my-en",
+            "CPCode": "1368715"
+        },
+        {
+            "locale": "nl-nl",
+            "CPCode": "1368716"
+        },
+        {
+            "locale": "no-no",
+            "CPCode": "1368717"
+        },
+        {
+            "locale": "nz-en",
+            "CPCode": "1368718"
+        },
+        {
+            "locale": "ph-en",
+            "CPCode": "1368719"
+        },
+        {
+            "locale": "pl-pl",
+            "CPCode": "1368720"
+        },
+        {
+            "locale": "pt-pt",
+            "CPCode": "1368721"
+        },
+        {
+            "locale": "ro-ro",
+            "CPCode": "1368722"
+        },
+        {
+            "locale": "rs-sr",
+            "CPCode": "1368723"
+        },
+        {
+            "locale": "ru-ru",
+            "CPCode": "1368724"
+        },
+        {
+            "locale": "se-sv",
+            "CPCode": "1368725"
+        },
+        {
+            "locale": "sg-en",
+            "CPCode": "1368726"
+        },
+        {
+            "locale": "si-en",
+            "CPCode": "1368727"
+        },
+        {
+            "locale": "th-th",
+            "CPCode": "1368728"
+        },
+        {
+            "locale": "tr-tr",
+            "CPCode": "1368729"
+        },
+        {
+            "locale": "tw-zh",
+            "CPCode": "1368730"
+        },
+        {
+            "locale": "tw-en",
+            "CPCode": "1368730"
+        },
+        {
+            "locale": "ua-uk",
+            "CPCode": "1368732"
+        },
+        {
+            "locale": "us-en",
+            "CPCode": "1368733"
+        },
+        {
+            "locale": "vn-vi",
+            "CPCode": "1368734"
+        },
+        {
+            "locale": "za-en",
+            "CPCode": "1368735"
+        }
+    ]
+}
